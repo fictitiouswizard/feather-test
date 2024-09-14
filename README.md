@@ -44,9 +44,13 @@ def on_test_success(test_name):
 event_bus.subscribe('test_start', on_test_start)
 event_bus.subscribe('test_success', on_test_success)
 
+suite = unittest.TestSuite()
+suite.addTest(unittest.TestLoader().loadTestsFromTestCase(ExampleTest1))
+suite.addTest(unittest.TestLoader().loadTestsFromTestCase(ExampleTest2))
+
 # Create the test runner and run tests
 runner = EventDrivenTestRunner(event_bus)
-result = runner.discover_and_run('tests')
+result = runner.run(suite)
 ```
 
 ## Available Events
