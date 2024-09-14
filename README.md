@@ -29,10 +29,8 @@ duck-test [options] [start_directory]
 ```
 
 Options:
-- `-v`, `--verbose`: Verbose output
 - `-f`, `--failfast`: Stop on first fail or error
 - `-c`, `--catch`: Catch control-C and display results
-- `-b`, `--buffer`: Buffer stdout and stderr during tests
 - `-k PROCESSES`, `--processes PROCESSES`: Number of processes to use
 - `-r REPORTER`, `--reporter REPORTER`: Reporter to use (default: DefaultReporter)
 - `-p PATTERN`, `--pattern PATTERN`: Pattern to match test files (default: test*.py)

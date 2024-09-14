@@ -10,14 +10,10 @@ def main():
                         help='Directory to start discovery (default: current directory)')
     parser.add_argument('-p', '--pattern', default='test*.py',
                         help='Pattern to match test files (default: test*.py)')
-    parser.add_argument('-v', '--verbose', action='store_true',
-                        help='Verbose output')
     parser.add_argument('-f', '--failfast', action='store_true',
                         help='Stop on first fail or error')
     parser.add_argument('-c', '--catch', action='store_true',
                         help='Catch control-C and display results')
-    parser.add_argument('-b', '--buffer', action='store_true',
-                        help='Buffer stdout and stderr during tests')
     parser.add_argument('-k', '--processes', type=int, default=1,
                         help='Number of processes to use')
     parser.add_argument('-r', '--reporter', default='DefaultReporter',
@@ -49,10 +45,8 @@ def main():
     # Create and configure the test runner
     runner = EventDrivenTestRunner(
         processes=args.processes,
-        verbosity=2 if args.verbose else 1,
         reporters=[(args.reporter, reporter_args)],
         failfast=args.failfast,
-        buffer=args.buffer,
         catch_interrupt=args.catch
     )
 
