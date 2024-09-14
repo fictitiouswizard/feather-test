@@ -1,4 +1,4 @@
-from mallard import EventBus, EventDrivenTestCase, EventDrivenTestRunner 
+from duck_test import EventBus, EventDrivenTestCase, EventDrivenTestRunner 
 import time
 import unittest
 
