@@ -4,48 +4,52 @@ import unittest
 
 class EventHandlers:
     @staticmethod
-    def on_test_run_start(data):
-        print("Test run started")
+    def on_test_run_start(correlation_id, run_id):
+        print(f"Test run started (Run ID: {run_id})")
 
     @staticmethod
-    def on_test_run_end(data):
-        print("Test run ended")
+    def on_test_run_end(correlation_id, run_id):
+        print(f"Test run ended (Run ID: {run_id})")
 
     @staticmethod
-    def on_test_start(test_name):
-        print(f"Starting test: {test_name}")
+    def on_test_start(correlation_id, test_name):
+        print(f"Starting test: {test_name} (Test ID: {correlation_id})")
 
     @staticmethod
-    def on_test_end(test_name):
-        print(f"Ending test: {test_name}")
+    def on_test_end(correlation_id, test_name):
+        print(f"Ending test: {test_name} (Test ID: {correlation_id})")
 
     @staticmethod
-    def on_custom_event(data):
-        print(f"Custom event received: {data}")
+    def on_custom_event(correlation_id, data):
+        print(f"Custom event received: {data} (Test ID: {correlation_id})")
 
     @staticmethod
-    def on_another_custom_event(data):
-        print(f"Another custom event received: {data}")
+    def on_another_custom_event(correlation_id, data):
+        print(f"Another custom event received: {data} (Test ID: {correlation_id})")
 
 class ExampleTest1(EventDrivenTestCase):
     def test_example1(self):
-        self.event_publisher.publish('custom_event', f'Custom event data from {self._testMethodName}')
+        self.event_publisher.publish('custom_event', self.correlation_id, 
+                                     data=f'Custom event data from {self._testMethodName} (Run ID: {self.run_correlation_id})')
         time.sleep(2)  # Simulate some work
         self.assertTrue(True)
 
     def test_another_example1(self):
-        self.event_publisher.publish('another_custom_event', f'More custom data from {self._testMethodName}')
+        self.event_publisher.publish('another_custom_event', self.correlation_id, 
+                                     data=f'More custom data from {self._testMethodName} (Run ID: {self.run_correlation_id})')
         time.sleep(2)  # Simulate some work
         self.assertEqual(1, 1)
 
 class ExampleTest2(EventDrivenTestCase):
     def test_example2(self):
-        self.event_publisher.publish('custom_event', f'Custom event data from {self._testMethodName}')
+        self.event_publisher.publish('custom_event', self.correlation_id, 
+                                     data=f'Custom event data from {self._testMethodName} (Run ID: {self.run_correlation_id})')
         time.sleep(2)  # Simulate some work
         self.assertFalse(False)
 
     def test_another_example2(self):
-        self.event_publisher.publish('another_custom_event', f'More custom data from {self._testMethodName}')
+        self.event_publisher.publish('another_custom_event', self.correlation_id, 
+                                     data=f'More custom data from {self._testMethodName} (Run ID: {self.run_correlation_id})')
         time.sleep(2)  # Simulate some work
         self.assertNotEqual(1, 2)
 
@@ -53,12 +57,12 @@ def run_tests():
     event_bus = EventBus()
 
     # Subscribe to events
-    event_bus.subscribe('test_run_start', EventHandlers.on_test_run_start)
-    event_bus.subscribe('test_run_end', EventHandlers.on_test_run_end)
-    event_bus.subscribe('test_start', EventHandlers.on_test_start)
-    event_bus.subscribe('test_end', EventHandlers.on_test_end)
-    event_bus.subscribe('custom_event', EventHandlers.on_custom_event)
-    event_bus.subscribe('another_custom_event', EventHandlers.on_another_custom_event)
+    # event_bus.subscribe('test_run_start', EventHandlers.on_test_run_start)
+    # event_bus.subscribe('test_run_end', EventHandlers.on_test_run_end)
+    # event_bus.subscribe('test_start', EventHandlers.on_test_start)
+    # event_bus.subscribe('test_end', EventHandlers.on_test_end)
+    # event_bus.subscribe('custom_event', EventHandlers.on_custom_event)
+    # event_bus.subscribe('another_custom_event', EventHandlers.on_another_custom_event)
 
     # Create a test suite with multiple test case classes
     suite = unittest.TestSuite()
