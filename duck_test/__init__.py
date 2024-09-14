@@ -1,1 +1,1 @@
-from duck_test.unittest import EventBus, EventDrivenTestCase, EventDrivenTestRunner, EventDrivenTestResult
+from duck_test.event_driven_unittest import EventBus, EventDrivenTestCase, EventDrivenTestRunner, EventDrivenTestResult

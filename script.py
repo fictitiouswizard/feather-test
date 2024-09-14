@@ -1,31 +1,52 @@
-from duck_test import EventBus, EventDrivenTestCase, EventDrivenTestRunner 
+from duck_test import EventDrivenTestCase, EventDrivenTestRunner
+from duck_test.reporters.base_reporter import BaseReporter
 import time
 import unittest
 
-class EventHandlers:
-    @staticmethod
-    def on_test_run_start(correlation_id, run_id):
-        print(f"Test run started (Run ID: {run_id})")
+class CustomReporter(BaseReporter):
+    def __init__(self):
+        self.total_tests = 0
+        self.passed_tests = 0
+        self.failed_tests = 0
+        self.error_tests = 0
+        self.start_time = None
 
-    @staticmethod
-    def on_test_run_end(correlation_id, run_id):
-        print(f"Test run ended (Run ID: {run_id})")
+    def on_test_run_start(self, correlation_id):
+        self.start_time = time.time()
+        print(f"🚀 Test run started (Run ID: {correlation_id})")
 
-    @staticmethod
-    def on_test_start(correlation_id, test_name):
-        print(f"Starting test: {test_name} (Test ID: {correlation_id})")
+    def on_test_run_end(self, correlation_id):
+        duration = time.time() - self.start_time
+        print(f"\n🏁 Test run completed in {duration:.2f} seconds")
+        print(f"Total tests: {self.total_tests}")
+        print(f"✅ Passed: {self.passed_tests}")
+        print(f"❌ Failed: {self.failed_tests}")
+        print(f"⚠️ Errors: {self.error_tests}")
 
-    @staticmethod
-    def on_test_end(correlation_id, test_name):
-        print(f"Ending test: {test_name} (Test ID: {correlation_id})")
+    def on_test_start(self, correlation_id, module_name, class_name, test_name):
+        self.total_tests += 1
+        print(f"\n▶️ Starting: {module_name}.{class_name}.{test_name}")
 
-    @staticmethod
-    def on_custom_event(correlation_id, data):
-        print(f"Custom event received: {data} (Test ID: {correlation_id})")
+    def on_test_success(self, correlation_id, module_name, class_name, test_name):
+        self.passed_tests += 1
+        print(f"  ✅ Passed: {module_name}.{class_name}.{test_name}")
 
-    @staticmethod
-    def on_another_custom_event(correlation_id, data):
-        print(f"Another custom event received: {data} (Test ID: {correlation_id})")
+    def on_test_failure(self, correlation_id, module_name, class_name, test_name, failure):
+        self.failed_tests += 1
+        print(f"  ❌ Failed: {module_name}.{class_name}.{test_name}")
+        print(f"     Reason: {failure}")
+
+    def on_test_error(self, correlation_id, module_name, class_name, test_name, error):
+        self.error_tests += 1
+        print(f"  ⚠️ Error: {module_name}.{class_name}.{test_name}")
+        print(f"     Error: {error}")
+
+    def on_custom_event(self, correlation_id, data):
+        print(f"  📣 Custom event: {data} (Test ID: {correlation_id})")
+
+    def on_another_custom_event(self, correlation_id, data):
+        print(f"  🔔 Another custom event: {data} (Test ID: {correlation_id})")
+
 
 class ExampleTest1(EventDrivenTestCase):
     def test_example1(self):
@@ -53,24 +74,16 @@ class ExampleTest2(EventDrivenTestCase):
         time.sleep(2)  # Simulate some work
         self.assertNotEqual(1, 2)
 
+
 def run_tests():
-    event_bus = EventBus()
-
-    # Subscribe to events
-    # event_bus.subscribe('test_run_start', EventHandlers.on_test_run_start)
-    # event_bus.subscribe('test_run_end', EventHandlers.on_test_run_end)
-    # event_bus.subscribe('test_start', EventHandlers.on_test_start)
-    # event_bus.subscribe('test_end', EventHandlers.on_test_end)
-    # event_bus.subscribe('custom_event', EventHandlers.on_custom_event)
-    # event_bus.subscribe('another_custom_event', EventHandlers.on_another_custom_event)
-
+    
     # Create a test suite with multiple test case classes
     suite = unittest.TestSuite()
     suite.addTest(unittest.TestLoader().loadTestsFromTestCase(ExampleTest1))
     suite.addTest(unittest.TestLoader().loadTestsFromTestCase(ExampleTest2))
 
     # Run the tests with our custom runner
-    runner = EventDrivenTestRunner(event_bus, processes=2, verbosity=2)
+    runner = EventDrivenTestRunner(processes=2, verbosity=2, reporters=['CustomReporter'])
     runner.run(suite)
 
 if __name__ == '__main__':

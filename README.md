@@ -1,101 +1,117 @@
-# Duck-Test: Event-Driven Unit Testing for Python
+# Duck Test
 
-Duck-Test is an advanced unit testing package for Python that extends the standard `unittest` module with event-driven capabilities and parallel test execution.
+Duck Test is an event-driven testing framework for Python, inspired by the unittest module but with enhanced features for parallel execution and customizable reporting.
 
 ## Features
 
-- Event-driven test execution
-- Real-time event publishing during test runs
-- Parallel test execution using multiple processes
-- Seamless integration with existing unittest-based tests
-- Customizable event subscriptions for detailed test monitoring
+- Event-driven architecture for flexible test execution and reporting
+- Parallel test execution for improved performance
+- Customizable reporters for tailored test output
+- Command-line interface similar to unittest for ease of use
+- Support for custom events during test execution
 
 ## Installation
 
-You can install Duck-Test using pip:
+You can install Duck Test using pip:
 
 ```bash
 pip install duck-test
 ```
 
-## Quick Start
+## Usage
 
-Here's a simple example of how to use Mallard:
+### Command-line Interface
+
+Duck Test can be run from the command line, similar to unittest:
+
+```bash
+duck-test [options] [start_directory]
+```
+
+Options:
+- `-v`, `--verbose`: Verbose output
+- `-f`, `--failfast`: Stop on first fail or error
+- `-c`, `--catch`: Catch control-C and display results
+- `-b`, `--buffer`: Buffer stdout and stderr during tests
+- `-k PROCESSES`, `--processes PROCESSES`: Number of processes to use
+- `-r REPORTER`, `--reporter REPORTER`: Reporter to use (default: DefaultReporter)
+- `-p PATTERN`, `--pattern PATTERN`: Pattern to match test files (default: test*.py)
+
+You can also pass reporter-specific arguments by prefixing them with the reporter name:
+
+```bash
+duck-test -r CustomReporter --customreporter-output-file report.txt --customreporter-verbose
+```
+
+### Writing Tests
+
+Tests are written similarly to unittest, but inherit from \`EventDrivenTestCase\`:
 
 ```python
-from duck_test.unittest import EventBus, EventDrivenTestCase, EventDrivenTestRunner
+from duck_test import EventDrivenTestCase
 
-# Define your test cases
 class MyTest(EventDrivenTestCase):
-    def test_addition(self):
-        self.assertEqual(1 + 1, 2)
-    def test_subtraction(self):
-        self.assertEqual(3 - 1, 2)
+    def test_example(self):
+        self.assertTrue(True)
 
-# Set up the event bus and subscribe to events
-event_bus = EventBus()
-
-def on_test_start(test_name):
-    print(f"Test started: {test_name}")
-
-def on_test_success(test_name):
-    print(f"Test succeeded: {test_name}")
-
-event_bus.subscribe('test_start', on_test_start)
-event_bus.subscribe('test_success', on_test_success)
-
-suite = unittest.TestSuite()
-suite.addTest(unittest.TestLoader().loadTestsFromTestCase(ExampleTest1))
-suite.addTest(unittest.TestLoader().loadTestsFromTestCase(ExampleTest2))
-
-# Create the test runner and run tests
-runner = EventDrivenTestRunner(event_bus)
-result = runner.run(suite)
+    def test_custom_event(self):
+        self.event_publisher.publish('custom_event', self.correlation_id, 
+                                     data='Custom event data')
+        self.assertEqual(1, 1)
 ```
 
-## Available Events
+### Custom Reporters
 
-Duck-Test publishes the following events during test execution:
-
-- `test_start`: Fired when a test method starts
-- `test_end`: Fired when a test method ends
-- `test_success`: Fired when a test passes
-- `test_error`: Fired when a test raises an error
-- `test_failure`: Fired when a test fails
-- `test_setup`: Fired when test setup begins
-- `test_teardown`: Fired when test teardown begins
-- `test_run_start`: Fired when the entire test run starts
-- `test_run_end`: Fired when the entire test run ends
-
-You can subscribe to these events using the `EventBus.subscribe()` method.
-
-## Advanced Usage
-
-### Parallel Test Execution
-
-Duck-Test supports parallel test execution using multiple processes:
+You can create custom reporters by inheriting from \`BaseReporter\`:
 
 ```python
-from duck_test.unittest import EventDrivenTestRunner
+from duck_test.event_driven_unittest import BaseReporter
 
-# Create the test runner with parallel execution
-runner = EventDrivenTestRunner(event_bus, num_processes=4)
-result = runner.discover_and_run('tests')
+class CustomReporter(BaseReporter):
+    def __init__(self, output_file=None, verbose=False):
+        self.output_file = output_file
+        self.verbose = verbose
+        self.total_tests = 0
+        self.passed_tests = 0
+
+    def on_test_run_start(self, correlation_id, **kwargs):
+        print(f"Test run started (Run ID: {kwargs['run_id']}")
+
+    def on_test_success(self, correlation_id, **kwargs):
+        self.passed_tests += 1
+        if self.verbose:
+            print(f"Test passed: {kwargs['module_name']}.{kwargs['class_name']}.{kwargs['test_name']}")
+
+    def on_test_run_end(self, correlation_id, **kwargs):
+        print(f"Tests completed. Passed: {self.passed_tests}/{self.total_tests}")
+        if self.output_file:
+            with open(self.output_file, 'w') as f:
+                f.write(f"Passed: {self.passed_tests}/{self.total_tests}")
 ```
 
-### Custom Event Handling
+### Programmatic Usage
 
-You can subscribe to various events to customize test monitoring and reporting:
+You can also use Duck Test programmatically:
 
 ```python
-event_bus.subscribe('test_failure', lambda data: print(f"Test failed: {data[0]}"))
-event_bus.subscribe('test_error', lambda data: print(f"Test error: {data[0]}"))
+from duck_test import EventDrivenTestRunner
+import unittest
+
+def run_tests():
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.TestLoader().loadTestsFromTestCase(MyTest))
+
+    runner = EventDrivenTestRunner(processes=2, verbosity=2, reporters=['CustomReporter'])
+    runner.run(suite)
+
+if __name__ == '__main__':
+    run_tests()
 ```
 
 ## Contributing
 
-We welcome contributions to Duck-Test! If you have suggestions or improvements, please open an issue or submit a pull request.
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+This project is licensed under the MIT License.
