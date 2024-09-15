@@ -43,9 +43,13 @@ class EventBus:
                 except (ImportError, AttributeError):
                     raise ValueError(f"Reporter '{reporter_name}' not found in __main__ or duck_test.reporters")
             
-            reporter = reporter_class(**kwargs)
+            # Convert kebab-case CLI arguments to snake_case for the reporter
+            snake_case_kwargs = {key.replace('-', '_'): value for key, value in kwargs.items()}
+            reporter = reporter_class(**snake_case_kwargs)
         elif isinstance(reporter_name, type) and issubclass(reporter_name, BaseReporter):
-            reporter = reporter_name(**kwargs)
+            # Convert kebab-case CLI arguments to snake_case for the reporter
+            snake_case_kwargs = {key.replace('-', '_'): value for key, value in kwargs.items()}
+            reporter = reporter_name(**snake_case_kwargs)
         else:
             raise ValueError("Reporter must be a string name or a BaseReporter subclass")
 
@@ -76,8 +80,10 @@ class EventBus:
                     for callback in self.subscribers[event_type]:
                         # Get the parameter names of the callback
                         params = inspect.signature(callback).parameters
+                        
                         # Prepare the arguments
                         args = {'correlation_id': correlation_id}
+
                         args.update({k: v for k, v in kwargs.items() if k in params})
                         # Call the callback with the prepared arguments
                         callback(**args)
@@ -195,7 +201,7 @@ class EventDrivenTestRunner:
                     try:
                         future.result()
                     except Exception as e:
-                        self.event_bus.publish('test_error', self.run_correlation_id, error=str(e))
+                        self.event_bus.publish('test_run_error', self.run_correlation_id, test_name="run", class_name="EventDrivenTestRunner", module_name="duck_test.event_driven_unittest", error=str(e))
                         if self.failfast:
                             break
         except KeyboardInterrupt:

@@ -6,7 +6,7 @@ from duck_test.event_driven_unittest import to_snake_case
 
 def main():
     parser = argparse.ArgumentParser(description='Run tests using the Duck Test framework.')
-    parser.add_argument('start_dir', nargs='?', default='.',
+    parser.add_argument('-d', '--directory', default='.',
                         help='Directory to start discovery (default: current directory)')
     parser.add_argument('-p', '--pattern', default='test*.py',
                         help='Pattern to match test files (default: test*.py)')
@@ -30,15 +30,16 @@ def main():
         if arg.startswith('--'):
             parts = arg[2:].split('-', 1)
             if len(parts) == 2 and parts[0].lower() == args.reporter.lower():
-                if i + 1 < len(unknown) and not unknown[i+1].startswith('--'):
-                    reporter_args[parts[1]] = unknown[i+1]
+                key = parts[1]
+                if i + 1 < len(unknown):
+                    reporter_args[key] = unknown[i+1]
                     i += 1
                 else:
-                    reporter_args[parts[1]] = True
+                    reporter_args[key] = True
         i += 1
 
     # Ensure the start directory is in the Python path
-    start_dir = os.path.abspath(args.start_dir)
+    start_dir = os.path.abspath(args.directory)
     if start_dir not in sys.path:
         sys.path.insert(0, start_dir)
 
