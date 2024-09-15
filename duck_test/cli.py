@@ -44,18 +44,8 @@ def main():
         sys.path.insert(0, start_dir)
 
     # Create and configure the test runner
-    runner = EventDrivenTestRunner(
-        processes=args.processes,
-        reporters=[(args.reporter, reporter_args)],
-        failfast=args.failfast,
-        catch_interrupt=args.catch
-    )
-
-    # Discover and run tests
-    suite = runner.discover_and_run(
-        start_dir=start_dir,
-        pattern=args.pattern
-    )
+    runner = EventDrivenTestRunner(processes=args.processes, reporters=[args.reporter])
+    runner.discover_and_run(start_dir=args.directory, pattern=args.pattern)
 
 if __name__ == '__main__':
     main()

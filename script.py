@@ -11,11 +11,11 @@ class CustomReporter(BaseReporter):
         self.error_tests = 0
         self.start_time = None
 
-    def on_test_run_start(self, correlation_id):
+    def on_test_run_start(self, correlation_id, run_id):
         self.start_time = time.time()
-        print(f"🚀 Test run started (Run ID: {correlation_id})")
+        print(f"🚀 Test run started (Run ID: {run_id})")
 
-    def on_test_run_end(self, correlation_id):
+    def on_test_run_end(self, correlation_id, run_id):
         duration = time.time() - self.start_time
         print(f"\n🏁 Test run completed in {duration:.2f} seconds")
         print(f"Total tests: {self.total_tests}")
@@ -23,26 +23,26 @@ class CustomReporter(BaseReporter):
         print(f"❌ Failed: {self.failed_tests}")
         print(f"⚠️ Errors: {self.error_tests}")
 
-    def on_test_start(self, correlation_id, module_name, class_name, test_name):
+    def on_test_start(self, correlation_id, test_name, class_name, module_name):
         self.total_tests += 1
         print(f"\n▶️ Starting: {module_name}.{class_name}.{test_name}")
 
-    def on_test_success(self, correlation_id, module_name, class_name, test_name):
+    def on_test_success(self, correlation_id, test_name, class_name, module_name):
         self.passed_tests += 1
         print(f"  ✅ Passed: {module_name}.{class_name}.{test_name}")
 
-    def on_test_failure(self, correlation_id, module_name, class_name, test_name, failure):
+    def on_test_failure(self, correlation_id, test_name, class_name, module_name, failure):
         self.failed_tests += 1
         print(f"  ❌ Failed: {module_name}.{class_name}.{test_name}")
         print(f"     Reason: {failure}")
 
-    def on_test_error(self, correlation_id, module_name, class_name, test_name, error):
+    def on_test_error(self, correlation_id, test_name, class_name, module_name, error):
         self.error_tests += 1
         print(f"  ⚠️ Error: {module_name}.{class_name}.{test_name}")
         print(f"     Error: {error}")
 
     def on_custom_event(self, correlation_id, data):
-        print(f"  📣 Custom event: {data} (Test ID: {correlation_id})")
+        print(f"   Custom event: {data} (Test ID: {correlation_id})")
 
     def on_another_custom_event(self, correlation_id, data):
         print(f"  🔔 Another custom event: {data} (Test ID: {correlation_id})")
@@ -75,16 +75,16 @@ class ExampleTest2(EventDrivenTestCase):
         self.assertNotEqual(1, 2)
 
 
-def run_tests():
-    
+def run_specific_tests():
+    print("\nRunning specific tests:")
     # Create a test suite with multiple test case classes
     suite = unittest.TestSuite()
     suite.addTest(unittest.TestLoader().loadTestsFromTestCase(ExampleTest1))
     suite.addTest(unittest.TestLoader().loadTestsFromTestCase(ExampleTest2))
 
-    # Run the tests with our custom runner
-    runner = EventDrivenTestRunner(processes=2, verbosity=2, reporters=['CustomReporter'])
+    # Run the specific test suite
+    runner = EventDrivenTestRunner(processes=2, reporters=['CustomReporter'])
     runner.run(suite)
 
 if __name__ == '__main__':
-    run_tests()
+    run_specific_tests()
