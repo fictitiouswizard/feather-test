@@ -27,7 +27,7 @@ class EventDrivenTestRunner:
         run_correlation_id (str): A unique identifier for the test run.
     """
 
-    def __init__(self, processes=None, reporters=None, server='TestServer'):
+    def __init__(self, processes=None, reporters=None, server='TestServer', **kwargs):
         """
         Initialize the EventDrivenTestRunner.
 

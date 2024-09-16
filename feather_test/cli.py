@@ -1,8 +1,38 @@
-import sys
-import os
 import argparse
 from feather_test import EventDrivenTestRunner
-from feather_test.utils import to_snake_case
+from feather_test.utils.reporter_loader import load_reporter
+from feather_test.utils.string_utils import to_snake_case
+
+def parse_reporter_args(unknown_args, reporters):
+    """
+    Parse unknown arguments to handle reporter-specific options.
+
+    Args:
+        unknown_args (list): List of unknown command-line arguments.
+        reporters (list): List of reporter names.
+
+    Returns:
+        dict: A dictionary of reporter-specific arguments.
+    """
+    reporter_args = {reporter: {} for reporter in reporters}
+    i = 0
+    while i < len(unknown_args):
+        arg = unknown_args[i]
+        if arg.startswith('--'):
+            parts = arg[2:].split('-', 1)
+            if len(parts) == 2:
+                reporter_name = parts[0].lower()
+                for full_reporter_name in reporters:
+                    if full_reporter_name.lower().startswith(reporter_name):
+                        key = to_snake_case(parts[1])
+                        if i + 1 < len(unknown_args) and not unknown_args[i+1].startswith('--'):
+                            reporter_args[full_reporter_name][key] = unknown_args[i+1]
+                            i += 1
+                        else:
+                            reporter_args[full_reporter_name][key] = True
+                        break
+        i += 1
+    return reporter_args
 
 def main():
     """
@@ -22,7 +52,7 @@ def main():
                         help='Catch control-C and display results')
     parser.add_argument('-k', '--processes', type=int, default=1,
                         help='Number of processes to use')
-    parser.add_argument('-r', '--reporter', default='ConsoleReporter',
+    parser.add_argument('-r', '--reporters', nargs='+', default='ConsoleReporter',
                         help='Reporter to use (default: ConsoleReporter)')
     parser.add_argument('-s', '--server', default='TestServer',
                         help='Test server to use (default: TestServer)')
@@ -31,56 +61,22 @@ def main():
     args, unknown = parser.parse_known_args()
 
     # Process unknown args for reporter-specific options
-    reporter_args = {}
-    i = 0
-    while i < len(unknown):
-        """
-        This while loop processes unknown arguments to handle reporter-specific options.
-        
-        It iterates through the unknown arguments, looking for options that match the
-        pattern '--<reporter_name>-<option_name>'. When found, it adds these options
-        to the reporter_args dictionary.
+    reporter_args = parse_reporter_args(unknown, args.reporters)
 
-        The loop works as follows:
-        1. Check if the current argument starts with '--'.
-        2. If it does, split the argument into parts using '-' as a separator.
-        3. If there are at least two parts and the first part (lowercase) matches
-           the specified reporter name (lowercase), process it as a reporter option.
-        4. If the next argument exists, use it as the option value; otherwise, set it to True.
-        5. Add the option to the reporter_args dictionary.
-        6. Increment the loop counter accordingly (by 2 if a value was found, by 1 otherwise).
+    reporter_args = {
+        reporter_name: {k.replace('-', '_'): v for k, v in args.items()}
+        for reporter_name, args in reporter_args.items()
+    }
 
-        This allows users to specify reporter-specific options in the CLI, which will
-        be passed to the chosen reporter during initialization.
-        """
-        arg = unknown[i]
-        if arg.startswith('--'):
-            parts = arg[2:].split('-', 1)
-            if len(parts) == 2 and parts[0].lower() == args.reporter.lower():
-                key = parts[1]
-                if i + 1 < len(unknown):
-                    reporter_args[key] = unknown[i+1]
-                    i += 1
-                else:
-                    reporter_args[key] = True
-        i += 1
+    # Initialize reporters
+    reporters = []
+    for reporter_name in args.reporters:
+        reporter = load_reporter(reporter_name, **reporter_args[reporter_name])
+        reporters.append(reporter)
 
-    # Ensure the start directory is in the Python path
-    start_dir = os.path.abspath(args.directory)
-    if start_dir not in sys.path:
-        sys.path.insert(0, start_dir)
-
-    # Create and configure the test runner
-    runner = EventDrivenTestRunner(processes=args.processes, reporters=[args.reporter])
-    
-    # Apply reporter-specific arguments
-    if reporter_args:
-        reporter_class = getattr(runner, f"_{to_snake_case(args.reporter)}")
-        for key, value in reporter_args.items():
-            setattr(reporter_class, key, value)
-
-    # Discover and run tests
+    # Create and run the test runner
+    runner = EventDrivenTestRunner(reporters=reporters)
     runner.discover_and_run(start_dir=args.directory, pattern=args.pattern)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -5,6 +5,7 @@ from typing import Dict, List, Callable
 import inspect
 from feather_test.reporters.base_reporter import BaseReporter
 from feather_test.utils import to_snake_case
+from feather_test.utils.reporter_loader import load_reporter
 
 class TestMessage:
     """
@@ -134,50 +135,14 @@ class EventBus:
 
     def load_reporter(self, reporter_name, **kwargs):
         """
-        Load and initialize a reporter.
+        Load a reporter by name and add it to the event bus.
 
-        :param reporter_name: The name of the reporter class or an instance of BaseReporter.
-        :param kwargs: Additional keyword arguments to pass to the reporter constructor.
-        :raises ValueError: If the reporter cannot be loaded or is invalid.
+        :param reporter_name: Name of the reporter to load
+        :param kwargs: Keyword arguments to pass to the reporter's constructor
         """
-        if isinstance(reporter_name, str):
-            reporter_class = self._get_reporter_class(reporter_name)
-            
-            # Convert kebab-case CLI arguments to snake_case for the reporter
-            snake_case_kwargs = {key.replace('-', '_'): value for key, value in kwargs.items()}
-            reporter = reporter_class(**snake_case_kwargs)
-        elif isinstance(reporter_name, type) and issubclass(reporter_name, BaseReporter):
-            # Convert kebab-case CLI arguments to snake_case for the reporter
-            snake_case_kwargs = {key.replace('-', '_'): value for key, value in kwargs.items()}
-            reporter = reporter_name(**snake_case_kwargs)
-        else:
-            raise ValueError("Reporter must be a string name or a BaseReporter subclass")
-
-        self.reporters.append(reporter)
+        reporter = load_reporter(reporter_name, **kwargs)
         self._subscribe_reporter(reporter)
-
-    def _get_reporter_class(self, reporter_name):
-        """
-        Get the reporter class based on the provided name.
-
-        :param reporter_name: The name of the reporter class.
-        :return: The reporter class.
-        :raises ValueError: If the reporter class cannot be found.
-        """
-        # Try to load from feather_test.reporters first
-        try:
-            module = importlib.import_module('feather_test.reporters')
-            reporter_class = getattr(module, reporter_name)
-        except AttributeError:
-            # If not found in feather_test.reporters, try to import from third-party package
-            try:
-                module_name = f'feather_test_reporter_{to_snake_case(reporter_name)}'
-                module = importlib.import_module(module_name)
-                reporter_class = getattr(module, reporter_name)
-            except (ImportError, AttributeError) as e:
-                raise ValueError(f"Reporter '{reporter_name}' not found: {str(e)}")
-        
-        return reporter_class
+        self.reporters.append(reporter)
 
     def _subscribe_reporter(self, reporter: BaseReporter):
         """
