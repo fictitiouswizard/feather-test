@@ -72,15 +72,15 @@ class CustomReporter(BaseReporter):
         self.total_tests = 0
         self.passed_tests = 0
 
-    def on_test_run_start(self, correlation_id, **kwargs):
-        print(f"Test run started (Run ID: {kwargs['run_id']}")
+    def on_test_run_start(self, correlation_id, run_id):
+        print(f"Test run started (Run ID: {run_id}")
 
-    def on_test_success(self, correlation_id, **kwargs):
+    def on_test_success(self, correlation_id, test_name, class_name, module_name):
         self.passed_tests += 1
         if self.verbose:
-            print(f"Test passed: {kwargs['module_name']}.{kwargs['class_name']}.{kwargs['test_name']}")
+            print(f"Test passed: {module_name}.{class_name}.{test_name}")
 
-    def on_test_run_end(self, correlation_id, **kwargs):
+    def on_test_run_end(self, correlation_id, run_id):
         print(f"Tests completed. Passed: {self.passed_tests}/{self.total_tests}")
         if self.output_file:
             with open(self.output_file, 'w') as f:
