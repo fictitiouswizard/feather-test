@@ -1,7 +1,7 @@
 import json
 import os
 from datetime import datetime
-from duck_test.reporters.base_reporter import BaseReporter
+from feather_test.reporters.base_reporter import BaseReporter
 
 class JSONReporter(BaseReporter):
     def __init__(self, output_dir='test_reports', filename=None):

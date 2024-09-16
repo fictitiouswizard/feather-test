@@ -1,12 +1,12 @@
-# Custom Test Servers in Duck Test
+# Custom Test Servers in Feather Test
 
-Duck Test allows you to create custom test servers to extend and customize the test execution environment. This guide will walk you through creating a custom test server that injects a context module into your tests.
+Feather Test allows you to create custom test servers to extend and customize the test execution environment. This guide will walk you through creating a custom test server that injects a context module into your tests.
 
 ## Creating a Custom Test Server
 
 To create a custom test server, follow these steps:
 
-1. Create a new Python file in the `duck_test/test_servers/` directory.
+1. Create a new Python file in the `feather_test/test_servers/` directory.
 2. Define a class that inherits from `TestServer`.
 3. Implement the `__init__` method and set up your custom hooks.
 
@@ -14,7 +14,7 @@ Here's an example of a custom test server that injects a context module:
 
 ```python
 import types
-from duck_test.test_server import TestServer
+from feather_test.test_server import TestServer
 
 class ContextInjectorServer(TestServer):
     def __init__(self, processes, event_queue):
@@ -25,7 +25,7 @@ class ContextInjectorServer(TestServer):
         @self.hook_manager.register('after_import')
         def inject_context_module(context):
             # Create a new module to inject
-            injected_module = types.ModuleType('duck_test_context')
+            injected_module = types.ModuleType('feather_test_context')
 
             # Add utility functions
             def assert_eventually(condition, timeout=5, interval=0.1):
@@ -50,7 +50,7 @@ class ContextInjectorServer(TestServer):
             injected_module.event_publisher = context['event_publisher']
 
             # Inject the module into the test module's globals
-            context['module'].__dict__['duck_test_context'] = injected_module
+            context['module'].__dict__['feather_test_context'] = injected_module
 
         @self.hook_manager.register('before_create_test')
         def setup_test_attributes(context):
@@ -80,14 +80,14 @@ To use your custom test server:
 1. From the command line:
 
    ```
-   duck-test -s ContextInjectorServer
+   feather -s ContextInjectorServer
    ```
 
 2. Programmatically:
 
    ```python
-   from duck_test import EventDrivenTestRunner
-   from duck_test.test_servers.context_injector_server import ContextInjectorServer
+   from feather_test import EventDrivenTestRunner
+   from feather_test.test_servers.context_injector_server import ContextInjectorServer
 
    runner = EventDrivenTestRunner(processes=2, reporters=['DefaultReporter'], server=ContextInjectorServer)
    runner.discover_and_run('tests')
@@ -98,12 +98,12 @@ To use your custom test server:
 Once you've set up your custom test server, you can access the injected context in your tests:
 
 ```python
-from duck_test import EventDrivenTestCase
+from feather_test import EventDrivenTestCase
 
 class TestWithInjectedContext(EventDrivenTestCase):
     def test_injected_context(self):
         # Access the injected module
-        from duck_test_context import assert_eventually, config, event_publisher
+        from feather_test_context import assert_eventually, config, event_publisher
 
         # Use the injected assert_eventually function
         def condition():
@@ -130,4 +130,4 @@ class TestWithInjectedContext(EventDrivenTestCase):
 4. Be cautious about modifying the test execution flow in hooks to maintain compatibility with the base TestServer.
 5. Clean up any resources or side effects in the `after_run_test` hook if necessary.
 
-By following these guidelines and using custom test servers, you can extend Duck Test to suit your specific testing needs while maintaining a clean and modular architecture.
+By following these guidelines and using custom test servers, you can extend Feather Test to suit your specific testing needs while maintaining a clean and modular architecture.

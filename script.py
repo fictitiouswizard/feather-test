@@ -1,5 +1,5 @@
-from duck_test import EventDrivenTestCase, EventDrivenTestRunner
-from duck_test.reporters.base_reporter import BaseReporter
+from feather_test import EventDrivenTestCase, EventDrivenTestRunner
+from feather_test.reporters.base_reporter import BaseReporter
 import time
 import unittest
 

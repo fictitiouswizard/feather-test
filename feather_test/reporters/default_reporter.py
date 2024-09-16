@@ -1,4 +1,4 @@
-from duck_test.reporters.base_reporter import BaseReporter
+from feather_test.reporters.base_reporter import BaseReporter
 
 class DefaultReporter(BaseReporter):
     def __init__(self):

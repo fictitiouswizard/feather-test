@@ -1,5 +1,5 @@
 import unittest
-from duck_test import EventDrivenTestCase
+from feather_test import EventDrivenTestCase
 
 class TestEndToEnd(EventDrivenTestCase):
     

@@ -1,6 +1,6 @@
-# Duck Test
+# Feather Test
 
-Duck Test is an event-driven testing framework for Python, inspired by the unittest module but with enhanced features for parallel execution and customizable reporting.
+Feather Test is an event-driven testing framework for Python, inspired by the unittest module but with enhanced features for parallel execution and customizable reporting.
 
 ## Features
 
@@ -12,20 +12,20 @@ Duck Test is an event-driven testing framework for Python, inspired by the unitt
 
 ## Installation
 
-You can install Duck Test using pip:
+You can install Feather Test using pip:
 
 ```bash
-pip install duck-test
+pip install feather-test
 ```
 
 ## Usage
 
 ### Command-line Interface
 
-Duck Test can be run from the command line, similar to unittest:
+Feather Test can be run from the command line, similar to unittest:
 
 ```bash
-duck-test [options] [start_directory]
+feather [options] [start_directory]
 ```
 
 Options:
@@ -38,7 +38,7 @@ Options:
 You can also pass reporter-specific arguments by prefixing them with the reporter name:
 
 ```bash
-duck-test -r CustomReporter --customreporter-output-file report.txt --customreporter-verbose
+feather -r CustomReporter --customreporter-output-file report.txt --customreporter-verbose
 ```
 
 ### Writing Tests
@@ -46,7 +46,7 @@ duck-test -r CustomReporter --customreporter-output-file report.txt --customrepo
 Tests are written similarly to unittest, but inherit from \`EventDrivenTestCase\`:
 
 ```python
-from duck_test import EventDrivenTestCase
+from feather_test import EventDrivenTestCase
 
 class MyTest(EventDrivenTestCase):
     def test_example(self):
@@ -63,7 +63,7 @@ class MyTest(EventDrivenTestCase):
 You can create custom reporters by inheriting from \`BaseReporter\`:
 
 ```python
-from duck_test.event_driven_unittest import BaseReporter
+from feather_test.event_driven_unittest import BaseReporter
 
 class CustomReporter(BaseReporter):
     def __init__(self, output_file=None, verbose=False):
@@ -89,10 +89,10 @@ class CustomReporter(BaseReporter):
 
 ### Programmatic Usage
 
-You can also use Duck Test programmatically:
+You can also use Feather Test programmatically:
 
 ```python
-from duck_test import EventDrivenTestRunner
+from feather_test import EventDrivenTestRunner
 import unittest
 
 def run_tests():
@@ -108,7 +108,7 @@ if __name__ == '__main__':
 
 ## Events
 
-Duck Test emits various events during the test execution process. Custom reporters can listen for these events to provide detailed and customized test reports. Here's a list of all events that can be emitted:
+Feather Test emits various events during the test execution process. Custom reporters can listen for these events to provide detailed and customized test reports. Here's a list of all events that can be emitted:
 
 1. `test_run_start`: Emitted when the entire test run begins.
    - Data: `run_id`
@@ -161,38 +161,38 @@ class MyTest(EventDrivenTestCase):
 
 Custom reporters can then handle these events by defining an `on_my_custom_event` method.
 
-# Third-Party Extensions for Duck Test
+# Third-Party Extensions for Feather Test
 
-Duck Test supports third-party TestServers and Reporters, allowing the community to extend the framework's functionality.
+Feather Test supports third-party TestServers and Reporters, allowing the community to extend the framework's functionality.
 
 ## Naming Convention
 
-All third-party packages for Duck Test must follow this specific naming convention:
+All third-party packages for Feather Test must follow this specific naming convention:
 
 - For TestServers:
-  - Package name: `duck-test-server-<name>`
-  - Python module name: `duck_test_server_<name>`
+  - Package name: `feather-test-server-<name>`
+  - Python module name: `feather_test_server_<name>`
   - Main class name: `<Name>TestServer`
 
 - For Reporters:
-  - Package name: `duck-test-reporter-<name>`
-  - Python module name: `duck_test_reporter_<name>`
+  - Package name: `feather-test-reporter-<name>`
+  - Python module name: `feather_test_reporter_<name>`
   - Main class name: `<Name>Reporter`
 
 This convention helps maintain consistency, avoid naming conflicts, and makes the purpose of each package immediately clear.
 
 ## Creating a Third-Party TestServer Package
 
-1. Create a new Python package named `duck-test-server-<name>` (e.g., `duck-test-server-custom`).
-2. Name your Python module `duck_test_server_<name>` (e.g., `duck_test_server_custom`).
-3. Implement your main TestServer class as `<Name>TestServer` (e.g., `CustomTestServer`) by subclassing `duck_test.test_server.TestServer`.
+1. Create a new Python package named `feather-test-server-<name>` (e.g., `feather-test-server-custom`).
+2. Name your Python module `feather_test_server_<name>` (e.g., `feather_test_server_custom`).
+3. Implement your main TestServer class as `<Name>TestServer` (e.g., `CustomTestServer`) by subclassing `feather_test.test_server.TestServer`.
 4. Publish your package to PyPI.
 
 Example structure:
 
 ```
-duck-test-server-custom/
-    duck_test_server_custom/
+feather-test-server-custom/
+    feather_test_server_custom/
         __init__.py
         custom_test_server.py
     setup.py
@@ -201,16 +201,16 @@ duck-test-server-custom/
 ```
 ## Creating a Third-Party Reporter Package
 
-1. Create a new Python package named `duck-test-reporter-<name>` (e.g., `duck-test-reporter-custom`).
-2. Name your Python module `duck_test_reporter_<name>` (e.g., `duck_test_reporter_custom`).
-3. Implement your main Reporter class as `<Name>Reporter` (e.g., `CustomReporter`) by subclassing `duck_test.reporters.base_reporter.BaseReporter`.
+1. Create a new Python package named `feather-test-reporter-<name>` (e.g., `feather-test-reporter-custom`).
+2. Name your Python module `feather_test_reporter_<name>` (e.g., `feather_test_reporter_custom`).
+3. Implement your main Reporter class as `<Name>Reporter` (e.g., `CustomReporter`) by subclassing `feather_test.reporters.base_reporter.BaseReporter`.
 4. Publish your package to PyPI.
 
 Example structure:
 
 ```
-duck-test-reporter-custom/
-    duck_test_reporter_custom/
+feather-test-reporter-custom/
+    feather_test_reporter_custom/
         __init__.py
         custom_reporter.py
     setup.py
@@ -224,12 +224,12 @@ After installing third-party packages, you can use them as follows:
 
 1. Command line:
    ```
-   duck-test -s CustomTestServer -r CustomReporter
+   feather -s CustomTestServer -r CustomReporter
    ```
 
 2. Programmatically:
    ```python
-   from duck_test import EventDrivenTestRunner
+   from feather_test import EventDrivenTestRunner
    
    runner = EventDrivenTestRunner(processes=2, reporters=['CustomReporter'], server='CustomTestServer')
    runner.discover_and_run('tests')

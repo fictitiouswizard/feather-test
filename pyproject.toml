@@ -1,13 +1,13 @@
 [tool.poetry]
-name = "duck-test"
+name = "feather-test"
 version = "0.1.0"
-description = "An event-driven testing framework for Python"
+description = "Feather-test: A event-driven testing framework for Python"
 authors = ["Jason Sanders <me@fictitiouswizard.com>"]
 license = "MIT"
 readme = "README.md"
-homepage = "https://git.fictitiouswizard.com/fictitiouswizard/duck-test"
-repository = "https://git.fictitiouswizard.com/fictitiouswizard/duck-test"
-documentation = "https://duck-test.readthedocs.io"
+homepage = "https://github.com/fictitiouswizard/feather-test"
+repository = "https://github.com/fictitiouswizard/feather-test"
+documentation = "https://feather-test.readthedocs.io"
 keywords = ["testing", "unittest", "event-driven"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -20,7 +20,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
 ]
 packages = [
-    { include = "duck_test" },
+    { include = "feather_test" },
 ]
 
 [tool.poetry.dependencies]
@@ -29,11 +29,11 @@ python = "^3.7"
 [tool.poetry.group.dev.dependencies]
 
 [tool.poetry.scripts]
-duck-test = "duck_test.cli:main"
+feather = "feather_test.cli:main"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.urls]
-"Bug Tracker" = "https://github.com/yourusername/duck-test/issues"
+"Bug Tracker" = "https://github.com/fictitiouswizard/feather-test/issues"

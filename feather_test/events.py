@@ -3,8 +3,8 @@ import queue
 import importlib
 from typing import Dict, List, Callable
 import inspect
-from duck_test.reporters.base_reporter import BaseReporter
-from duck_test.utils import to_snake_case
+from feather_test.reporters.base_reporter import BaseReporter
+from feather_test.utils import to_snake_case
 
 
 
@@ -70,14 +70,14 @@ class EventBus:
         self._subscribe_reporter(reporter)
 
     def _get_reporter_class(self, reporter_name):
-        # Try to load from duck_test.reporters first
+        # Try to load from feather_test.reporters first
         try:
-            module = importlib.import_module('duck_test.reporters')
+            module = importlib.import_module('feather_test.reporters')
             reporter_class = getattr(module, reporter_name)
         except AttributeError:
-            # If not found in duck_test.reporters, try to import from third-party package
+            # If not found in feather_test.reporters, try to import from third-party package
             try:
-                module_name = f'duck_test_reporter_{to_snake_case(reporter_name)}'
+                module_name = f'feather_test_reporter_{to_snake_case(reporter_name)}'
                 module = importlib.import_module(module_name)
                 reporter_class = getattr(module, reporter_name)
             except (ImportError, AttributeError) as e:
@@ -103,7 +103,6 @@ class EventBus:
         while True:
             try:
                 event_type, correlation_id, kwargs = self.event_queue.get(timeout=0.1)
-                print("from queue", event_type, correlation_id, kwargs)
                 if event_type == 'STOP':
                     break
                 if event_type in self.subscribers:

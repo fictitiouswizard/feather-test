@@ -1,11 +1,11 @@
 import sys
 import os
 import argparse
-from duck_test import EventDrivenTestRunner
-from duck_test.utils import to_snake_case
+from feather_test import EventDrivenTestRunner
+from feather_test.utils import to_snake_case
 
 def main():
-    parser = argparse.ArgumentParser(description='Run tests using the Duck Test framework.')
+    parser = argparse.ArgumentParser(description='Run tests using the Feather Test framework.')
     parser.add_argument('-d', '--directory', default='.',
                         help='Directory to start discovery (default: current directory)')
     parser.add_argument('-p', '--pattern', default='test*.py',

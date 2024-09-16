@@ -1,7 +1,7 @@
 import multiprocessing
 from multiprocessing import Pool
 from functools import wraps
-from duck_test.events import TestMessage, EventPublisher
+from feather_test.events import TestMessage, EventPublisher
 
 class HookManager:
     def __init__(self):

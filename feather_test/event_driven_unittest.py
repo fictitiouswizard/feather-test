@@ -5,9 +5,9 @@ import multiprocessing
 import uuid
 import time
 import re
-from duck_test.events import EventBus, TestMessage
-from duck_test.test_servers import TestServer
-from duck_test.utils import to_snake_case
+from feather_test.events import EventBus, TestMessage
+from feather_test.test_servers import TestServer
+from feather_test.utils import to_snake_case
 
 
 class EventDrivenTestResult(unittest.TestResult):
@@ -136,9 +136,9 @@ class EventDrivenTestRunner:
     def _create_extension(self, extension_type, class_name):
         # Try to load from built-in extensions first
         if extension_type == 'server':
-            built_in_module = 'duck_test.test_servers'
+            built_in_module = 'feather_test.test_servers'
         else:  # reporter
-            built_in_module = 'duck_test.reporters'
+            built_in_module = 'feather_test.reporters'
         
         try:
             module = importlib.import_module(built_in_module)
@@ -146,7 +146,7 @@ class EventDrivenTestRunner:
         except AttributeError:
             # If not found in built-in, try to import from third-party package
             try:
-                module_name = f'duck_test_{extension_type}_{class_name.lower()}'
+                module_name = f'feather_test_{extension_type}_{class_name.lower()}'
                 module = importlib.import_module(module_name)
                 extension_class = getattr(module, class_name)
             except (ImportError, AttributeError) as e:
@@ -164,19 +164,19 @@ class EventDrivenTestRunner:
             server_class = getattr(main_module, server_name, None)
             
             if server_class is None:
-                # If not found in __main__, try duck_test.test_servers
+                # If not found in __main__, try feather_test.test_servers
                 try:
                     snake_case_name = to_snake_case(server_name)
-                    module = importlib.import_module(f'duck_test.test_servers.{snake_case_name}')
+                    module = importlib.import_module(f'feather_test.test_servers.{snake_case_name}')
                     server_class = getattr(module, server_name)
                 except (ImportError, AttributeError):
-                    # If not found in duck_test.test_servers, try to import from any installed package
+                    # If not found in feather_test.test_servers, try to import from any installed package
                     try:
                         module_name, class_name = server_name.rsplit('.', 1)
                         
-                        # Check if the module name follows the duck_test_server_* convention
-                        if not module_name.startswith('duck_test_server_'):
-                            raise ValueError(f"Third-party test server '{module_name}' does not follow the duck_test_server_* naming convention")
+                        # Check if the module name follows the feather_test_server_* convention
+                        if not module_name.startswith('feather_test_server_'):
+                            raise ValueError(f"Third-party test server '{module_name}' does not follow the feather_test_server_* naming convention")
                         
                         # Import directly using the module name
                         module = importlib.import_module(module_name)
