@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "feather-test"
-version = "0.1.0"
+version = "0.1.1"
 description = "Feather-test: A event-driven testing framework for Python"
 authors = ["Jason Sanders <me@fictitiouswizard.com>"]
 license = "MIT"
