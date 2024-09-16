@@ -4,79 +4,37 @@ import unittest
 import multiprocessing
 import uuid
 import time
-import re
 from feather_test.events import EventBus, TestMessage
 from feather_test.test_servers import TestServer
 from feather_test.utils import to_snake_case
 
 
-class EventDrivenTestResult(unittest.TestResult):
-    def __init__(self, event_publisher):
-        super().__init__()
-        self.event_publisher = event_publisher
-
-    def startTest(self, test):
-        super().startTest(test)
-        self.event_publisher.publish('test_start', test.correlation_id, 
-                                     test_name=test.test_name,
-                                     class_name=test.class_name,
-                                     module_name=test.module_name)
-
-    def stopTest(self, test):
-        super().stopTest(test)
-        self.event_publisher.publish('test_end', test.correlation_id, 
-                                     test_name=test.test_name,
-                                     class_name=test.class_name,
-                                     module_name=test.module_name)
-
-    def addSuccess(self, test):
-        super().addSuccess(test)
-        self.event_publisher.publish('test_success', test.correlation_id, 
-                                     test_name=test.test_name,
-                                     class_name=test.class_name,
-                                     module_name=test.module_name)
-
-    def addError(self, test, err):
-        super().addError(test, err)
-        self.event_publisher.publish('test_error', test.correlation_id, 
-                                     test_name=test.test_name,
-                                     class_name=test.class_name,
-                                     module_name=test.module_name,
-                                     error=str(err))
-
-    def addFailure(self, test, err):
-        super().addFailure(test, err)
-        self.event_publisher.publish('test_failure', test.correlation_id, 
-                                     test_name=test.test_name,
-                                     class_name=test.class_name,
-                                     module_name=test.module_name,
-                                     failure=str(err))
-
-    def addSkip(self, test, reason):
-        super().addSkip(test, reason)
-        self.event_publisher.publish('test_skip', test.correlation_id, 
-                                     test_name=test.test_name,
-                                     class_name=test.class_name,
-                                     module_name=test.module_name,
-                                     reason=reason)
-
-    def addExpectedFailure(self, test, err):
-        super().addExpectedFailure(test, err)
-        self.event_publisher.publish('test_expected_failure', test.correlation_id, 
-                                     test_name=test.test_name,
-                                     class_name=test.class_name,
-                                     module_name=test.module_name,
-                                     error=str(err))
-
-    def addUnexpectedSuccess(self, test):
-        super().addUnexpectedSuccess(test)
-        self.event_publisher.publish('test_unexpected_success', test.correlation_id, 
-                                     test_name=test.test_name,
-                                     class_name=test.class_name,
-                                     module_name=test.module_name)
-
 class EventDrivenTestRunner:
+    """
+    A test runner that discovers and executes tests, publishing events throughout the process.
+
+    This runner integrates with the event-driven architecture of Feather Test,
+    allowing for parallel test execution and custom reporting.
+
+    Attributes:
+        processes (int): Number of processes to use for parallel test execution.
+        manager (multiprocessing.Manager): A manager for sharing objects between processes.
+        event_queue (multiprocessing.Queue): A queue for sharing events between processes.
+        event_bus (EventBus): An instance of EventBus for managing events.
+        event_publisher (EventPublisher): An instance of EventPublisher for sending events.
+        test_server (TestServer): An instance of TestServer for managing test execution.
+        test_loader (unittest.TestLoader): A loader for discovering tests.
+        run_correlation_id (str): A unique identifier for the test run.
+    """
+
     def __init__(self, processes=None, reporters=None, server='TestServer'):
+        """
+        Initialize the EventDrivenTestRunner.
+
+        :param processes: Number of processes to use for parallel test execution.
+        :param reporters: List of reporter names to use for test reporting.
+        :param server: Name of the TestServer class to use.
+        """
         self.processes = processes or multiprocessing.cpu_count()
         self.manager = multiprocessing.Manager()
         self.event_queue = self.manager.Queue()
@@ -91,10 +49,24 @@ class EventDrivenTestRunner:
                 self.event_bus.load_reporter(reporter)
 
     def discover_and_run(self, start_dir, pattern='test*.py', top_level_dir=None):
+        """
+        Discover and run tests in the specified directory.
+
+        :param start_dir: Directory to start discovering tests.
+        :param pattern: Pattern to match test files.
+        :param top_level_dir: Top level directory of the project.
+        :return: TestResult containing the results of the test run.
+        """
         suite = self.test_loader.discover(start_dir, pattern, top_level_dir)
         return self.run(suite)
 
     def run(self, test_suite):
+        """
+        Run the given test suite.
+
+        :param test_suite: A TestSuite object containing tests to run.
+        :return: TestResult containing the results of the test run.
+        """
         self._enqueue_tests(test_suite)
         
         self.event_processor = multiprocessing.Process(target=self.event_bus.process_events)
@@ -109,6 +81,11 @@ class EventDrivenTestRunner:
         self._process_remaining_events()
 
     def _enqueue_tests(self, suite):
+        """
+        Recursively enqueue tests from a test suite.
+
+        :param suite: A TestSuite object or a single test case.
+        """
         if isinstance(suite, unittest.TestSuite):
             for test in suite:
                 self._enqueue_tests(test)
@@ -120,6 +97,9 @@ class EventDrivenTestRunner:
             ))
 
     def _process_remaining_events(self):
+        """
+        Process any remaining events in the queue and stop the event processor.
+        """
         # Wait for a short time to allow remaining events to be processed
         time.sleep(0.5)
         self.event_bus.publish('STOP', None)
@@ -127,37 +107,14 @@ class EventDrivenTestRunner:
         if self.event_processor.is_alive():
             self.event_processor.terminate()
 
-    def _create_test_server(self, server_class_name):
-        return self._create_extension('server', server_class_name)
-
-    def _create_reporter(self, reporter_class_name):
-        return self._create_extension('reporter', reporter_class_name)
-
-    def _create_extension(self, extension_type, class_name):
-        # Try to load from built-in extensions first
-        if extension_type == 'server':
-            built_in_module = 'feather_test.test_servers'
-        else:  # reporter
-            built_in_module = 'feather_test.reporters'
-        
-        try:
-            module = importlib.import_module(built_in_module)
-            extension_class = getattr(module, class_name)
-        except AttributeError:
-            # If not found in built-in, try to import from third-party package
-            try:
-                module_name = f'feather_test_{extension_type}_{class_name.lower()}'
-                module = importlib.import_module(module_name)
-                extension_class = getattr(module, class_name)
-            except (ImportError, AttributeError) as e:
-                raise ValueError(f"{extension_type.capitalize()} '{class_name}' not found: {str(e)}")
-        
-        if extension_type == 'server':
-            return extension_class(self.processes, self.event_queue)
-        else:  # reporter
-            return extension_class()
-
     def _create_test_server(self, server_name):
+        """
+        Create and return an instance of the specified TestServer.
+
+        :param server_name: Name of the TestServer class to instantiate.
+        :return: An instance of the specified TestServer.
+        :raises ValueError: If the specified TestServer cannot be found or instantiated.
+        """
         if isinstance(server_name, str):
             # Try to load from __main__ first
             main_module = sys.modules['__main__']
@@ -191,7 +148,28 @@ class EventDrivenTestRunner:
             raise ValueError("Server must be a string name or a TestServer subclass")
 
 class EventDrivenTestCase(unittest.TestCase):
+    """
+    A TestCase class that integrates with the event-driven architecture of Feather Test.
+
+    This class extends unittest.TestCase to add event publishing capabilities and
+    additional metadata for each test case.
+
+    Attributes:
+        event_publisher (EventPublisher): An instance of EventPublisher for sending events.
+        correlation_id (str): A unique identifier for the test case.
+        run_correlation_id (str): A unique identifier for the test run.
+        test_name (str): The name of the test method.
+        class_name (str): The name of the test class.
+        module_name (str): The name of the module containing the test.
+    """
+
     def __init__(self, *args, **kwargs):
+        """
+        Initialize the EventDrivenTestCase.
+
+        :param args: Positional arguments to pass to unittest.TestCase.
+        :param kwargs: Keyword arguments to pass to unittest.TestCase.
+        """
         super().__init__(*args, **kwargs)
         self.event_publisher = None
         self.correlation_id = str(uuid.uuid4())
@@ -201,18 +179,65 @@ class EventDrivenTestCase(unittest.TestCase):
         self.module_name = self.__class__.__module__
 
     def set_event_publisher(self, publisher):
+        """
+        Set the event publisher for this test case.
+
+        :param publisher: An instance of EventPublisher.
+        """
         self.event_publisher = publisher
 
     def run(self, result=None):
-        if not isinstance(result, EventDrivenTestResult):
-            result = EventDrivenTestResult(self.event_publisher)
-        super().run(result)
+        """
+        Run the test, using EventDrivenTestResult if no result is provided.
+
+        :param result: A TestResult object to store the results of the test.
+        :return: The TestResult object after running the test.
+        """
+        if result is None:
+            result = self.defaultTestResult()
+        result.startTest(self)
+        testMethod = getattr(self, self._testMethodName)
+        try:
+            success = False
+            try:
+                self.setUp()
+            except Exception:
+                result.addError(self, sys.exc_info())
+                return
+            try:
+                testMethod()
+            except unittest.SkipTest as e:
+                result.addSkip(self, str(e))
+            except Exception:
+                result.addFailure(self, sys.exc_info())
+            else:
+                success = True
+            try:
+                self.tearDown()
+            except Exception:
+                success = False
+                result.addError(self, sys.exc_info())
+            if success:
+                result.addSuccess(self)
+        finally:
+            result.stopTest(self)
+        return result
 
     def setUp(self):
+        """
+        Set up the test fixture. This method is called before each test method.
+
+        Publishes a 'test_setup' event if an event publisher is available.
+        """
         if self.event_publisher:
             self.event_publisher.publish('test_setup', self.correlation_id, test_name=self._testMethodName)
 
     def tearDown(self):
+        """
+        Tear down the test fixture. This method is called after each test method.
+
+        Publishes a 'test_teardown' event if an event publisher is available.
+        """
         if self.event_publisher:
             self.event_publisher.publish('test_teardown', self.correlation_id, test_name=self._testMethodName)
 

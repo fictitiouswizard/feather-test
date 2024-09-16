@@ -1,1 +1,2 @@
-from feather_test.event_driven_unittest import EventBus, EventDrivenTestCase, EventDrivenTestRunner, EventDrivenTestResult
+from feather_test.event_driven_unittest import EventBus, EventDrivenTestCase, EventDrivenTestRunner
+from feather_test.event_driven_test_result import EventDrivenTestResult
