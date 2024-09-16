@@ -1,12 +1,10 @@
 import json
-import multiprocessing
 import queue
-import sys
 import importlib
 from typing import Dict, List, Callable
 import inspect
 from duck_test.reporters.base_reporter import BaseReporter
-from duck_test.helpers import to_snake_case
+from duck_test.utils import to_snake_case
 
 
 
@@ -56,18 +54,7 @@ class EventBus:
 
     def load_reporter(self, reporter_name, **kwargs):
         if isinstance(reporter_name, str):
-            # Try to load from __main__ first
-            main_module = sys.modules['__main__']
-            reporter_class = getattr(main_module, reporter_name, None)
-            
-            if reporter_class is None:
-                # If not found in __main__, try duck_test.reporters
-                try:
-                    snake_case_name = to_snake_case(reporter_name)
-                    module = importlib.import_module(f'duck_test.reporters.{snake_case_name}')
-                    reporter_class = getattr(module, reporter_name)
-                except (ImportError, AttributeError):
-                    raise ValueError(f"Reporter '{reporter_name}' not found in __main__ or duck_test.reporters")
+            reporter_class = self._get_reporter_class(reporter_name)
             
             # Convert kebab-case CLI arguments to snake_case for the reporter
             snake_case_kwargs = {key.replace('-', '_'): value for key, value in kwargs.items()}
@@ -81,6 +68,22 @@ class EventBus:
 
         self.reporters.append(reporter)
         self._subscribe_reporter(reporter)
+
+    def _get_reporter_class(self, reporter_name):
+        # Try to load from duck_test.reporters first
+        try:
+            module = importlib.import_module('duck_test.reporters')
+            reporter_class = getattr(module, reporter_name)
+        except AttributeError:
+            # If not found in duck_test.reporters, try to import from third-party package
+            try:
+                module_name = f'duck_test_reporter_{to_snake_case(reporter_name)}'
+                module = importlib.import_module(module_name)
+                reporter_class = getattr(module, reporter_name)
+            except (ImportError, AttributeError) as e:
+                raise ValueError(f"Reporter '{reporter_name}' not found: {str(e)}")
+        
+        return reporter_class
 
     def _subscribe_reporter(self, reporter: BaseReporter):
         for name, method in inspect.getmembers(reporter, inspect.ismethod):

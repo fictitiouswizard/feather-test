@@ -1,12 +1,13 @@
+import importlib
+import sys
 import unittest
 import multiprocessing
-import importlib
 import uuid
 import time
+import re
 from duck_test.events import EventBus, TestMessage
-import queue
-from multiprocessing import Pool, Manager
-from duck_test.test_server import TestServer
+from duck_test.test_servers import TestServer
+from duck_test.utils import to_snake_case
 
 
 class EventDrivenTestResult(unittest.TestResult):
@@ -75,13 +76,13 @@ class EventDrivenTestResult(unittest.TestResult):
                                      module_name=test.module_name)
 
 class EventDrivenTestRunner:
-    def __init__(self, processes=None, reporters=None):
+    def __init__(self, processes=None, reporters=None, server='TestServer'):
         self.processes = processes or multiprocessing.cpu_count()
         self.manager = multiprocessing.Manager()
         self.event_queue = self.manager.Queue()
         self.event_bus = EventBus(self.event_queue)
         self.event_publisher = self.event_bus.get_publisher()
-        self.test_server = TestServer(self.processes, self.event_queue)
+        self.test_server = self._create_test_server(server)
         self.test_loader = unittest.TestLoader()
         self.run_correlation_id = str(uuid.uuid4())
 
@@ -126,6 +127,69 @@ class EventDrivenTestRunner:
         if self.event_processor.is_alive():
             self.event_processor.terminate()
 
+    def _create_test_server(self, server_class_name):
+        return self._create_extension('server', server_class_name)
+
+    def _create_reporter(self, reporter_class_name):
+        return self._create_extension('reporter', reporter_class_name)
+
+    def _create_extension(self, extension_type, class_name):
+        # Try to load from built-in extensions first
+        if extension_type == 'server':
+            built_in_module = 'duck_test.test_servers'
+        else:  # reporter
+            built_in_module = 'duck_test.reporters'
+        
+        try:
+            module = importlib.import_module(built_in_module)
+            extension_class = getattr(module, class_name)
+        except AttributeError:
+            # If not found in built-in, try to import from third-party package
+            try:
+                module_name = f'duck_test_{extension_type}_{class_name.lower()}'
+                module = importlib.import_module(module_name)
+                extension_class = getattr(module, class_name)
+            except (ImportError, AttributeError) as e:
+                raise ValueError(f"{extension_type.capitalize()} '{class_name}' not found: {str(e)}")
+        
+        if extension_type == 'server':
+            return extension_class(self.processes, self.event_queue)
+        else:  # reporter
+            return extension_class()
+
+    def _create_test_server(self, server_name):
+        if isinstance(server_name, str):
+            # Try to load from __main__ first
+            main_module = sys.modules['__main__']
+            server_class = getattr(main_module, server_name, None)
+            
+            if server_class is None:
+                # If not found in __main__, try duck_test.test_servers
+                try:
+                    snake_case_name = to_snake_case(server_name)
+                    module = importlib.import_module(f'duck_test.test_servers.{snake_case_name}')
+                    server_class = getattr(module, server_name)
+                except (ImportError, AttributeError):
+                    # If not found in duck_test.test_servers, try to import from any installed package
+                    try:
+                        module_name, class_name = server_name.rsplit('.', 1)
+                        
+                        # Check if the module name follows the duck_test_server_* convention
+                        if not module_name.startswith('duck_test_server_'):
+                            raise ValueError(f"Third-party test server '{module_name}' does not follow the duck_test_server_* naming convention")
+                        
+                        # Import directly using the module name
+                        module = importlib.import_module(module_name)
+                        server_class = getattr(module, class_name)
+                    except (ImportError, AttributeError, ValueError) as e:
+                        raise ValueError(f"Test server '{server_name}' not found or invalid: {str(e)}")
+            
+            return server_class(self.processes, self.event_queue)
+        elif isinstance(server_name, type) and issubclass(server_name, TestServer):
+            return server_name(self.processes, self.event_queue)
+        else:
+            raise ValueError("Server must be a string name or a TestServer subclass")
+
 class EventDrivenTestCase(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -135,6 +199,9 @@ class EventDrivenTestCase(unittest.TestCase):
         self.test_name = self._testMethodName
         self.class_name = self.__class__.__name__
         self.module_name = self.__class__.__module__
+
+    def set_event_publisher(self, publisher):
+        self.event_publisher = publisher
 
     def run(self, result=None):
         if not isinstance(result, EventDrivenTestResult):

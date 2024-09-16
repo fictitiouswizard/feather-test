@@ -1,9 +1,9 @@
 import json
 import os
 from datetime import datetime
-from duck_test.event_driven_unittest import BaseReporter
+from duck_test.reporters.base_reporter import BaseReporter
 
-class JsonReporter(BaseReporter):
+class JSONReporter(BaseReporter):
     def __init__(self, output_dir='test_reports', filename=None):
         print(output_dir)
         if not isinstance(output_dir, (str, bytes, os.PathLike)):

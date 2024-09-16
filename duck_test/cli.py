@@ -2,7 +2,7 @@ import sys
 import os
 import argparse
 from duck_test import EventDrivenTestRunner
-from duck_test.event_driven_unittest import to_snake_case
+from duck_test.utils import to_snake_case
 
 def main():
     parser = argparse.ArgumentParser(description='Run tests using the Duck Test framework.')
@@ -18,6 +18,8 @@ def main():
                         help='Number of processes to use')
     parser.add_argument('-r', '--reporter', default='DefaultReporter',
                         help='Reporter to use (default: DefaultReporter)')
+    parser.add_argument('-s', '--server', default='TestServer',
+                        help='Test server to use (default: TestServer)')
     
     # Parse known args first
     args, unknown = parser.parse_known_args()
