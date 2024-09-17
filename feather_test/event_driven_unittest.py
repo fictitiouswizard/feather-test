@@ -7,6 +7,9 @@ import time
 from feather_test.events import EventBus, TestMessage
 from feather_test.test_servers import TestServer
 from feather_test.utils import to_snake_case
+import logging
+
+logger = logging.getLogger("feather_test")
 
 
 class EventDrivenTestRunner:
@@ -37,8 +40,9 @@ class EventDrivenTestRunner:
         """
         self.processes = processes or multiprocessing.cpu_count()
         self.manager = multiprocessing.Manager()
-        self.event_queue = self.manager.Queue()
-        self.event_bus = EventBus()
+        self.event_queue = self.manager.Queue() 
+        self.event_bus = EventBus(self.event_queue)
+
         # self.event_publisher = self.event_bus.get_publisher()
         self.test_server = self._create_test_server(server)
         self.test_loader = unittest.TestLoader()
@@ -68,7 +72,7 @@ class EventDrivenTestRunner:
         :return: TestResult containing the results of the test run.
         """
         self._enqueue_tests(test_suite)
-
+        self.event_bus.start()
         self.event_bus.event_publisher.publish('test_run_start', self.run_correlation_id, run_id=self.run_correlation_id)
 
         self.test_server.start()
@@ -140,9 +144,9 @@ class EventDrivenTestRunner:
                     except (ImportError, AttributeError, ValueError) as e:
                         raise ValueError(f"Test server '{server_name}' not found or invalid: {str(e)}")
             
-            return server_class(self.processes, self.event_queue)
+            return server_class(self.processes, self.event_bus.event_publisher)
         elif isinstance(server_name, type) and issubclass(server_name, TestServer):
-            return server_name(self.processes, self.event_queue)
+            return server_name(self.processes, self.event_bus.event_publisher)
         else:
             raise ValueError("Server must be a string name or a TestServer subclass")
 

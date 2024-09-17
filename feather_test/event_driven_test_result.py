@@ -1,4 +1,7 @@
 import unittest
+import logging
+
+logger = logging.getLogger("feather_test")
 
 
 class EventDrivenTestResult(unittest.TestResult):

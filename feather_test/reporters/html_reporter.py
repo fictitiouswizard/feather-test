@@ -1,11 +1,13 @@
-import os
 from feather_test.reporters.base_reporter import BaseReporter
 from datetime import datetime
-from collections import defaultdict
+import logging
+
+logger = logging.getLogger("feather_test")
 
 class HTMLReporter(BaseReporter):
     def __init__(self, output_file='report.html'):
         self.output_file = output_file
+        print(f"HTMLReporter initialized with output file: {self.output_file}")
         self.results = {} 
         self.start_time = None
         self.end_time = None
@@ -22,6 +24,7 @@ class HTMLReporter(BaseReporter):
         self.results.setdefault(module_name, {}).setdefault(class_name, [])
 
     def on_test_success(self, correlation_id, test_name, class_name, module_name):
+        print(f"Test passed: {test_name}")
         self.results[module_name][class_name].append(f"<p style='color: green;'>Test Passed: {test_name}</p>")
 
     def on_test_failure(self, correlation_id, test_name, class_name, module_name, failure):
@@ -37,6 +40,7 @@ class HTMLReporter(BaseReporter):
         self.results[module_name][class_name].append(f"<pre>Reason: {reason}</pre>")
 
     def _write_report(self, duration):
+        print(f"Test results: {self.results}")
         with open(self.output_file, 'w') as f:
             f.write("<html><head><title>Test Report</title></head><body>")
             f.write(f"<h1>Test Run Started: {self.start_time}</h1>")

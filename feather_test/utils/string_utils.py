@@ -1,4 +1,7 @@
 import re
+import logging
+
+logger = logging.getLogger("feather_test")
 
 
 def to_snake_case(name):

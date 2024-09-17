@@ -1,8 +1,20 @@
 import argparse
+import logging
 from multiprocessing import freeze_support
+import os
+import sys
 from feather_test import EventDrivenTestRunner
 from feather_test.utils.reporter_loader import load_reporter
 from feather_test.utils.string_utils import to_snake_case
+
+default_log_level = os.environ.get('FEATHER_LOG_LEVEL', 'INFO')
+
+logging.basicConfig(
+    level=getattr(logging, default_log_level),
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    stream=sys.stdout
+)
+logger = logging.getLogger("feather_test")
 
 def parse_reporter_args(unknown_args, reporters):
     """

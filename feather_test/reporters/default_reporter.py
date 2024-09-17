@@ -1,4 +1,7 @@
 from feather_test.reporters.base_reporter import BaseReporter
+import logging
+
+logger = logging.getLogger("feather_test")
 
 class DefaultReporter(BaseReporter):
     """

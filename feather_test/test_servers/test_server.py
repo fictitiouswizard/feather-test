@@ -7,6 +7,9 @@ import sys
 import traceback
 from unittest import TestCase
 import uuid
+import logging
+
+logger = logging.getLogger("feather_test")
 
 class LoadFailedTestCase(TestCase):
     """A custom TestCase to represent a test that failed to load."""
@@ -101,7 +104,7 @@ class TestServer:
         hook_manager (HookManager): An instance of HookManager for managing test lifecycle hooks.
     """
 
-    def __init__(self, processes, event_queue):
+    def __init__(self, processes, event_publisher):
         """
         Initialize the TestServer.
 
@@ -109,7 +112,7 @@ class TestServer:
         :param event_queue: A multiprocessing Queue for publishing test events.
         """
         self.processes = processes
-        self.event_queue = event_queue
+        self.event_publisher = event_publisher
         self.test_queue = multiprocessing.Manager().Queue()
         self.hook_manager = HookManager()
 
@@ -136,12 +139,11 @@ class TestServer:
 
         :param process_id: An identifier for the worker process.
         """
-        event_publisher = EventPublisher(self.event_queue)
         while True:
             try:
                 test_json = self.test_queue.get(block=False)
                 test_message = TestMessage.from_json(test_json)
-                self._run_single_test(test_message, event_publisher)
+                self._run_single_test(test_message, self.event_publisher)
             except multiprocessing.queues.Empty:
                 break
 

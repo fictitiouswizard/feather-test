@@ -1,6 +1,9 @@
 import importlib
 import inspect
 from feather_test.utils import to_snake_case
+import logging
+
+logger = logging.getLogger("feather_test")
 
 def load_reporter(reporter_name_or_instance, **kwargs):
     """

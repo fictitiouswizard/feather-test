@@ -3,6 +3,9 @@ import inspect
 from multiprocessing import Queue, Process, Event, freeze_support
 
 from feather_test.reporters.base_reporter import BaseReporter
+import logging
+
+logger = logging.getLogger("feather_test")
 
 class ReporterProxy:
     def __init__(self, reporter_class_or_instance, *args, **kwargs):
