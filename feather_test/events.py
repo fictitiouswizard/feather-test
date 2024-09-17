@@ -1,11 +1,15 @@
 import json
 import queue
 import importlib
+import traceback
 from typing import Dict, List, Callable
 import inspect
 from feather_test.reporters.base_reporter import BaseReporter
 from feather_test.utils import to_snake_case
 from feather_test.utils.reporter_loader import load_reporter
+from feather_test.reporters.reporter_proxy import ReporterProxy
+import multiprocessing
+import sys
 
 class TestMessage:
     """
@@ -81,7 +85,7 @@ class EventPublisher:
 
         :param queue: A multiprocessing.Queue instance for storing events.
         """
-        self.event_queue = queue
+        self.queue = queue
 
     def publish(self, event_type: str, correlation_id: str, **kwargs):
         """
@@ -91,23 +95,88 @@ class EventPublisher:
         :param correlation_id: A unique identifier to correlate related events.
         :param kwargs: Additional keyword arguments associated with the event.
         """
-        self.event_queue.put((event_type, correlation_id, kwargs))
+        print(f"Publishing event: {event_type}")
+        self.queue.put((event_type, correlation_id, kwargs))
 
-    def __getstate__(self):
-        """
-        Get the state of the EventPublisher for pickling.
+class ReporterProcess:
+    def __init__(self, reporter_class_or_instance, *args, **kwargs):
+        self.reporter_class_or_instance = reporter_class_or_instance
+        self.args = args
+        self.kwargs = kwargs
+        self.event_queue = multiprocessing.Queue()
+        self.stdout_queue = multiprocessing.Queue()
+        self.process = None
 
-        :return: A dictionary containing the event_queue.
-        """
-        return {'event_queue': self.event_queue}
+    def start(self):
+        self.process = multiprocessing.Process(target=self._run)
+        self.process.start()
 
-    def __setstate__(self, state):
-        """
-        Set the state of the EventPublisher when unpickling.
+    def _run(self):
+        try:
+            # Redirect stdout and stderr to the stdout_queue
+            sys.stdout = StdoutRedirector(self.stdout_queue)
+            sys.stderr = StdoutRedirector(self.stdout_queue)
 
-        :param state: A dictionary containing the event_queue.
-        """
-        self.event_queue = state['event_queue']
+            if callable(self.reporter_class_or_instance):
+                reporter = self.reporter_class_or_instance(*self.args, **self.kwargs)
+            else:
+                reporter = self.reporter_class_or_instance
+
+            print(f"Reporter process started: {reporter.__class__.__name__}")
+
+            while True:
+                try:
+                    event = self.event_queue.get(timeout=1)
+                    if event is None:
+                        break
+                    event_type, correlation_id, kwargs = event
+                    if hasattr(reporter, event_type):
+                        getattr(reporter, event_type)(correlation_id=correlation_id, **kwargs)
+                    else:
+                        print(f"Warning: {reporter.__class__.__name__} has no method {event_type}")
+                except multiprocessing.queues.Empty:
+                    continue
+                except Exception as e:
+                    print(f"Error in reporter process: {e}")
+                    traceback.print_exc()
+
+            print(f"Reporter process stopping: {reporter.__class__.__name__}")
+        except Exception as e:
+            print(f"Error initializing reporter: {e}")
+            traceback.print_exc()
+        finally:
+            sys.stdout = sys.__stdout__
+            sys.stderr = sys.__stderr__
+
+    def send_event(self, event_type, correlation_id, **kwargs):
+        if self.process and self.process.is_alive():
+            try:
+                self.event_queue.put((event_type, correlation_id, kwargs))
+            except BrokenPipeError:
+                print(f"BrokenPipeError: Reporter process may have terminated unexpectedly")
+        else:
+            print(f"Warning: Attempted to send event to terminated reporter process")
+
+    def stop(self):
+        if self.process and self.process.is_alive():
+            try:
+                self.event_queue.put(None)
+                self.process.join(timeout=5)
+                if self.process.is_alive():
+                    print(f"Warning: Reporter process did not terminate gracefully, forcing termination")
+                    self.process.terminate()
+            except Exception as e:
+                print(f"Error stopping reporter process: {e}")
+
+class StdoutRedirector:
+    def __init__(self, queue):
+        self.queue = queue
+
+    def write(self, msg):
+        self.queue.put(msg)
+
+    def flush(self):
+        sys.__stdout__.flush()
 
 class EventBus:
     """
@@ -123,90 +192,57 @@ class EventBus:
         reporters (List[BaseReporter]): A list of reporter instances for handling test events.
     """
 
-    def __init__(self, queue):
-        """
-        Initialize an EventBus instance.
+    def __init__(self):
+        self.reporters: Dict[str, ReporterProcess] = {}
+        self.event_queue = multiprocessing.Queue()
+        self.event_publisher = EventPublisher(self.event_queue)
+        self.is_running = False
 
-        :param queue: A multiprocessing.Queue instance for storing events.
-        """
-        self.event_queue = queue
-        self.subscribers: Dict[str, List[Callable]] = {}
-        self.reporters: List[BaseReporter] = []
+    def load_reporter(self, reporter_name, *args, **kwargs):
+        from feather_test.utils.reporter_loader import load_reporter
+        reporter_class_or_instance = load_reporter(reporter_name)
+        if reporter_class_or_instance:
+            reporter_process = ReporterProcess(reporter_class_or_instance, *args, **kwargs)
+            self.reporters[reporter_name] = reporter_process
+            reporter_process.start()
+            print(f"Reporter loaded and started: {reporter_name}")
+        else:
+            print(f"Failed to load reporter: {reporter_name}")
 
-    def load_reporter(self, reporter_name, **kwargs):
-        """
-        Load a reporter by name and add it to the event bus.
-
-        :param reporter_name: Name of the reporter to load
-        :param kwargs: Keyword arguments to pass to the reporter's constructor
-        """
-        reporter = load_reporter(reporter_name, **kwargs)
-        self._subscribe_reporter(reporter)
-        self.reporters.append(reporter)
-
-    def _subscribe_reporter(self, reporter: BaseReporter):
-        """
-        Subscribe a reporter to relevant events.
-
-        :param reporter: An instance of BaseReporter.
-        """
-        for name, method in inspect.getmembers(reporter, inspect.ismethod):
-            if name.startswith('on_'):
-                event_name = name[3:]
-                self.subscribe(event_name, method)
-
-    def subscribe(self, event_type: str, callback: Callable):
-        """
-        Subscribe a callback to a specific event type.
-
-        :param event_type: The type of event to subscribe to.
-        :param callback: The callback function to be called when the event occurs.
-        """
-        if event_type not in self.subscribers:
-            self.subscribers[event_type] = []
-        self.subscribers[event_type].append(callback)
-
-    def publish(self, event_type: str, correlation_id: str, **kwargs):
-        """
-        Publish an event to the event queue.
-
-        :param event_type: The type of the event being published.
-        :param correlation_id: A unique identifier to correlate related events.
-        :param kwargs: Additional keyword arguments associated with the event.
-        """
-        self.event_queue.put((event_type, correlation_id, kwargs))
-
-    def process_events(self):
-        """
-        Process events from the event queue and dispatch them to subscribers.
-
-        This method runs in a loop, continuously processing events until a 'STOP' event is received.
-        """
-        while True:
+    def start(self):
+        self.is_running = True
+        while self.is_running:
             try:
-                event_type, correlation_id, kwargs = self.event_queue.get(timeout=0.1)
-                if event_type == 'STOP':
-                    break
-                if event_type in self.subscribers:
-                    for callback in self.subscribers[event_type]:
-                        # Get the parameter names of the callback
-                        params = inspect.signature(callback).parameters
-                        
-                        # Prepare the arguments
-                        args = {'correlation_id': correlation_id}
+                # Handle stdout from all reporters
+                for reporter in self.reporters.values():
+                    while True:
+                        try:
+                            stdout_msg = reporter.stdout_queue.get_nowait()
+                            sys.stdout.write(stdout_msg)
+                            sys.stdout.flush()
+                        except multiprocessing.queues.Empty:
+                            break
 
-                        args.update({k: v for k, v in kwargs.items() if k in params})
-                        
-                        # Call the callback with the prepared arguments
-                        callback(**args)
-            except queue.Empty:
+                # Handle events
+                event = self.event_queue.get(timeout=0.1)
+                event_type, correlation_id, kwargs = event
+                for reporter in self.reporters.values():
+                    reporter.send_event(event_type, correlation_id, **kwargs)
+            except multiprocessing.queues.Empty:
                 continue
+            except Exception as e:
+                print(f"Error in EventBus: {e}")
+                traceback.print_exc()
 
-    def get_publisher(self):
-        """
-        Get an EventPublisher instance for this EventBus.
+    def stop(self):
+        self.is_running = False
+        for reporter_name, reporter in self.reporters.items():
+            print(f"Stopping reporter: {reporter_name}")
+            reporter.stop()
 
-        :return: An EventPublisher instance.
-        """
-        return EventPublisher(self.event_queue)
+    def get_event_publisher(self):
+        return self.event_publisher
+
+    def __del__(self):
+        self.stop()
 

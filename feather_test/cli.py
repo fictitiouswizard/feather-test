@@ -1,4 +1,5 @@
 import argparse
+from multiprocessing import freeze_support
 from feather_test import EventDrivenTestRunner
 from feather_test.utils.reporter_loader import load_reporter
 from feather_test.utils.string_utils import to_snake_case
@@ -52,7 +53,7 @@ def main():
                         help='Catch control-C and display results')
     parser.add_argument('-k', '--processes', type=int, default=1,
                         help='Number of processes to use')
-    parser.add_argument('-r', '--reporters', nargs='+', default='ConsoleReporter',
+    parser.add_argument('-r', '--reporters', nargs='+', default=['ConsoleReporter'],
                         help='Reporter to use (default: ConsoleReporter)')
     parser.add_argument('-s', '--server', default='TestServer',
                         help='Test server to use (default: TestServer)')
@@ -70,6 +71,8 @@ def main():
 
     # Initialize reporters
     reporters = []
+    if isinstance(args.reporters, str):
+        args.reporters = [args.reporters]
     for reporter_name in args.reporters:
         reporter = load_reporter(reporter_name, **reporter_args[reporter_name])
         reporters.append(reporter)
@@ -79,4 +82,5 @@ def main():
     runner.discover_and_run(start_dir=args.directory, pattern=args.pattern)
 
 if __name__ == "__main__":
+    freeze_support()
     main()

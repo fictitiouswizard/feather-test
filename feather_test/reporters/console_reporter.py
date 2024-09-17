@@ -21,7 +21,9 @@ import sys
 from typing import Dict, Any
 from collections import deque
 
-class ConsoleReporter:
+from feather_test.reporters.base_reporter import BaseReporter
+
+class ConsoleReporter(BaseReporter):
     """
     A reporter class for outputting test results to the console.
 
@@ -81,7 +83,7 @@ class ConsoleReporter:
             correlation_id (str): A unique identifier for correlating events.
             run_id (str): A unique identifier for the test run.
         """
-        self._write("\033[2J\033[H")  # Clear screen
+        # self._write("\033[2J\033[H")  # Clear screen
         self._write(f"Starting test run (Run ID: {run_id})\n\n", self.COLORS['BLUE'])
 
     def on_test_start(self, correlation_id: str, test_name: str, class_name: str, module_name: str):

@@ -1,4 +1,5 @@
 import importlib
+import inspect
 from feather_test.utils import to_snake_case
 
 def load_reporter(reporter_name_or_instance, **kwargs):
@@ -19,12 +20,14 @@ def load_reporter(reporter_name_or_instance, **kwargs):
         # Try to load from feather_test.reporters first
         module = importlib.import_module('feather_test.reporters')
         reporter_class = getattr(module, reporter_name)
+        return reporter_class(**kwargs)
     except (AttributeError, ImportError, TypeError):
         # If not found, try to import as a fully qualified name
         try:
             module_name, class_name = reporter_name.rsplit('.', 1)
             module = importlib.import_module(module_name)
             reporter_class = getattr(module, class_name)
+            return reporter_class(**kwargs)
         except (ValueError, ImportError, AttributeError):
             # If still not found, try to import from any installed package
             try:
@@ -34,4 +37,4 @@ def load_reporter(reporter_name_or_instance, **kwargs):
             except (ImportError, AttributeError):
                 raise ValueError(f"Reporter '{reporter_name}' not found or invalid")
 
-    return reporter_class(**kwargs)
+    

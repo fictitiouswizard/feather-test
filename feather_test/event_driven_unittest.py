@@ -38,8 +38,8 @@ class EventDrivenTestRunner:
         self.processes = processes or multiprocessing.cpu_count()
         self.manager = multiprocessing.Manager()
         self.event_queue = self.manager.Queue()
-        self.event_bus = EventBus(self.event_queue)
-        self.event_publisher = self.event_bus.get_publisher()
+        self.event_bus = EventBus()
+        # self.event_publisher = self.event_bus.get_publisher()
         self.test_server = self._create_test_server(server)
         self.test_loader = unittest.TestLoader()
         self.run_correlation_id = str(uuid.uuid4())
@@ -68,17 +68,15 @@ class EventDrivenTestRunner:
         :return: TestResult containing the results of the test run.
         """
         self._enqueue_tests(test_suite)
-        
-        self.event_processor = multiprocessing.Process(target=self.event_bus.process_events)
-        self.event_processor.start()
 
-        self.event_publisher.publish('test_run_start', self.run_correlation_id, run_id=self.run_correlation_id)
+        self.event_bus.event_publisher.publish('test_run_start', self.run_correlation_id, run_id=self.run_correlation_id)
 
         self.test_server.start()
 
-        self.event_publisher.publish('test_run_end', self.run_correlation_id, run_id=self.run_correlation_id)
+        self.event_bus.event_publisher.publish('test_run_end', self.run_correlation_id, run_id=self.run_correlation_id)
 
         self._process_remaining_events()
+        self._stop_reporters()
 
     def _enqueue_tests(self, suite):
         """
@@ -100,12 +98,13 @@ class EventDrivenTestRunner:
         """
         Process any remaining events in the queue and stop the event processor.
         """
+        pass
         # Wait for a short time to allow remaining events to be processed
-        time.sleep(0.5)
-        self.event_bus.publish('STOP', None)
-        self.event_processor.join(timeout=5)
-        if self.event_processor.is_alive():
-            self.event_processor.terminate()
+        # time.sleep(0.5)
+        # self.event_bus.publish('STOP', None)
+        # self.event_processor.join(timeout=5)
+        # if self.event_processor.is_alive():
+        #     self.event_processor.terminate()
 
     def _create_test_server(self, server_name):
         """
@@ -146,6 +145,15 @@ class EventDrivenTestRunner:
             return server_name(self.processes, self.event_queue)
         else:
             raise ValueError("Server must be a string name or a TestServer subclass")
+
+    def _stop_reporters(self):
+        """
+        Stop all reporters.
+        """
+        self.event_bus.stop()
+        # for reporter in self.event_bus.reporters:
+            # reporter.stop()
+
 
 class EventDrivenTestCase(unittest.TestCase):
     """
