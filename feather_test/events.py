@@ -194,6 +194,7 @@ class EventBus:
                     event_type, correlation_id, kwargs = event
                     logger.debug(f"Processing event: {event_type}, {correlation_id}")
                     for reporter in self.reporters.values():
+                        logger.debug(f"Sending event to reporter: {event_type}, {correlation_id}")
                         reporter.send_event(event_type, correlation_id, **kwargs)
                 except multiprocessing.queues.Empty:
                     pass
@@ -202,13 +203,14 @@ class EventBus:
                 logger.error(traceback.format_exc())
 
     def stop(self):
+        for reporter_name, reporter in self.reporters.items():
+            logger.debug(f"Stopping reporter: {reporter_name}")
+            reporter.stop()
         logger.debug("Stopping EventBus")
         self.is_running = False
         if self.thread:
             self.thread.join()
-        for reporter_name, reporter in self.reporters.items():
-            logger.debug(f"Stopping reporter: {reporter_name}")
-            reporter.stop()
+
         logger.debug("EventBus stopped")
 
     def get_event_publisher(self):

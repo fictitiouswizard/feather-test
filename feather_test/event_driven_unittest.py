@@ -76,7 +76,7 @@ class EventDrivenTestRunner:
         self.event_bus.event_publisher.publish('test_run_start', self.run_correlation_id, run_id=self.run_correlation_id)
 
         self.test_server.start()
-
+        
         self.event_bus.event_publisher.publish('test_run_end', self.run_correlation_id, run_id=self.run_correlation_id)
 
         self._process_remaining_events()
@@ -102,9 +102,10 @@ class EventDrivenTestRunner:
         """
         Process any remaining events in the queue and stop the event processor.
         """
-        pass
+        if not self.event_bus.event_queue.empty():
+            logger.warning(f"There are {self.event_bus.event_queue.unfinished_tasks} events left in the queue")
         # Wait for a short time to allow remaining events to be processed
-        # time.sleep(0.5)
+        time.sleep(0.5)
         # self.event_bus.publish('STOP', None)
         # self.event_processor.join(timeout=5)
         # if self.event_processor.is_alive():

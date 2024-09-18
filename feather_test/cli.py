@@ -7,7 +7,7 @@ from feather_test import EventDrivenTestRunner
 from feather_test.utils.reporter_loader import load_reporter
 from feather_test.utils.string_utils import to_snake_case
 
-default_log_level = os.environ.get('FEATHER_LOG_LEVEL', 'INFO')
+default_log_level = os.environ.get('FEATHER_LOG_LEVEL', 'WARNING')
 
 logging.basicConfig(
     level=getattr(logging, default_log_level),

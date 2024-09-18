@@ -17,12 +17,15 @@ Usage:
 
 """
 
+import sys
+from colorama import init, Fore, Back, Style
 import logging
 
 logger = logging.getLogger("feather_test")
 
 class ConsoleReporter:
     def __init__(self):
+        init()
         self.test_count = 0
         self.pass_count = 0
         self.fail_count = 0
@@ -33,27 +36,50 @@ class ConsoleReporter:
         logger.debug(f"ConsoleReporter wrote: {message}")
 
     def on_test_run_start(self, correlation_id: str, **kwargs):
-        self._write(f"Test run started. Correlation ID: {correlation_id}")
+        self._write(f"\n{Fore.CYAN}{'='*60}")
+        self._write(f"{Fore.CYAN}🚀 Test Run Started: {Style.BRIGHT}{correlation_id}{Style.RESET_ALL}")
+        self._write(f"{Fore.CYAN}{'='*60}{Style.RESET_ALL}\n")
 
     def on_test_start(self, correlation_id: str, test_name: str, **kwargs):
         self.test_count += 1
-        self._write(f"Starting test: {test_name}")
+        self._write(f"{Fore.YELLOW}▶ Running: {Style.BRIGHT}{test_name}{Style.RESET_ALL}")
 
     def on_test_pass(self, correlation_id: str, test_name: str, **kwargs):
         self.pass_count += 1
-        self._write(f"Test passed: {test_name}")
+        self._write(f"{Fore.GREEN}✅ Passed: {Style.BRIGHT}{test_name}{Style.RESET_ALL}")
 
-    def on_test_fail(self, correlation_id: str, test_name: str, error_message: str, **kwargs):
+    def on_test_failure(self, correlation_id: str, test_name: str, failure: str, **kwargs):
         self.fail_count += 1
-        self._write(f"Test failed: {test_name}")
-        self._write(f"Error: {error_message}")
-    
+        self._write(f"{Fore.RED}❌ Failed: {Style.BRIGHT}{test_name}{Style.RESET_ALL}")
+        self._write(f"{Fore.RED}   Error: {failure}{Style.RESET_ALL}")
+
     def on_test_success(self, correlation_id: str, test_name: str, **kwargs):
         self.pass_count += 1
-        self._write(f"Test passed: {test_name}")
+        self._write(f"{Fore.GREEN}✅ Passed: {Style.BRIGHT}{test_name}{Style.RESET_ALL}")
+    
+    def on_test_setup(self, correlation_id: str, test_name: str, **kwargs):
+        pass
+
+    def on_test_end(self, correlation_id: str, test_name: str, **kwargs):
+        pass
+
+    def on_test_teardown(self, correlation_id: str, test_name: str, **kwargs):
+        pass
+
+    def on_test_skip(self, correlation_id: str, test_name: str, **kwargs):
+        self._write(f"{Fore.YELLOW}▶ Skipped: {Style.BRIGHT}{test_name}{Style.RESET_ALL}")
 
     def on_test_run_end(self, correlation_id: str, **kwargs):
-        self._write(f"Test run completed. Correlation ID: {correlation_id}")
-        self._write(f"Total tests: {self.test_count}")
-        self._write(f"Passed: {self.pass_count}")
-        self._write(f"Failed: {self.fail_count}")
+        self._write(f"\n{Fore.CYAN}{'='*60}")
+        self._write(f"{Fore.CYAN}🏁 Test Run Completed: {Style.BRIGHT}{correlation_id}{Style.RESET_ALL}")
+        self._write(f"{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
+        
+        self._write(f"\n{Style.BRIGHT}Summary:{Style.RESET_ALL}")
+        self._write(f"  Total Tests: {self.test_count}")
+        self._write(f"  {Fore.GREEN}Passed: {self.pass_count}{Style.RESET_ALL}")
+        self._write(f"  {Fore.RED}Failed: {self.fail_count}{Style.RESET_ALL}")
+        
+        if self.fail_count == 0:
+            self._write(f"\n{Fore.GREEN}{Style.BRIGHT}🎉 All tests passed!{Style.RESET_ALL}")
+        else:
+            self._write(f"\n{Fore.RED}{Style.BRIGHT}😢 Some tests failed.{Style.RESET_ALL}")
